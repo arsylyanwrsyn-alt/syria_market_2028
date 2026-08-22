@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/config/app_config.dart';
 import '../../../services/supabase_service.dart';
-import '../../widgets/marquee_ticker_widget.dart';
-import '../../widgets/banner_carousel_widget.dart';
+import '../../../widgets/marquee_ticker_widget.dart';
+import '../../../widgets/banner_carousel_widget.dart';
 
 class HomeMainContentView extends StatelessWidget {
   const HomeMainContentView({super.key});
