@@ -1,54 +1,157 @@
-ng Android
-2m 1s
+import 'dart:async';
+import 'package:flutter/material.dart' hide CarouselController;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
+class BannerCarouselWidget extends StatefulWidget {
+  final List<Map<String, dynamic>> banners;
 
+  const BannerCarouselWidget({super.key, required this.banners});
 
+  @override
+  State<BannerCarouselWidget> createState() => _BannerCarouselWidgetState();
+}
 
-WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): flutter_image_compress_common
-Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+class _BannerCarouselWidgetState extends State<BannerCarouselWidget> {
+  int _currentSlideIndex = 0;
+  final CarouselSliderController _carouselController = CarouselSliderController();
+  Timer? _customTimer;
 
-Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
-If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing
-an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+  List<Map<String, dynamic>> get _activeBanners =>
+      widget.banners.where((b) => (b['is_active'] as bool? ?? true)).toList();
 
-If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
-Checking the license for package Android SDK Platform 36 in /usr/local/share/android-sdk/licenses
-License for package Android SDK Platform 36 accepted.
-Preparing "Install Android SDK Platform 36 (revision 2)".
-"Install Android SDK Platform 36 (revision 2)" ready.
-Installing Android SDK Platform 36 in /usr/local/share/android-sdk/platforms/android-36
-"Install Android SDK Platform 36 (revision 2)" complete.
-"Install Android SDK Platform 36 (revision 2)" finished.
-lib/screens/home/views/home_main_content_view.dart:86:26: Error: The method 'BannerCarouselWidget' isn't defined for the type 'HomeMainContentView'.
- - 'HomeMainContentView' is from 'package:souq_syria/screens/home/views/home_main_content_view.dart' ('lib/screens/home/views/home_main_content_view.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'BannerCarouselWidget'.
-                  return BannerCarouselWidget(banners: banners);
-                         ^^^^^^^^^^^^^^^^^^^^
-lib/widgets/banner_carousel_widget.dart:86:26: Error: The method 'BannerCarouselWidget' isn't defined for the type 'HomeMainContentView'.
- - 'HomeMainContentView' is from 'package:souq_syria/widgets/banner_carousel_widget.dart' ('lib/widgets/banner_carousel_widget.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'BannerCarouselWidget'.
-                  return BannerCarouselWidget(banners: banners);
-                         ^^^^^^^^^^^^^^^^^^^^
-Target kernel_snapshot_program failed: Exception
+  @override
+  void initState() {
+    super.initState();
+    _startCustomTimer();
+  }
 
+  @override
+  void didUpdateWidget(covariant BannerCarouselWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.banners != widget.banners) {
+      _startCustomTimer();
+    }
+  }
 
-FAILURE: Build failed with an exception.
+  void _startCustomTimer() {
+    _customTimer?.cancel();
+    final list = _activeBanners;
+    if (list.isEmpty) return;
 
-* What went wrong:
-Execution failed for task ':app:compileFlutterBuildDebug'.
-> Process 'command '/Users/builder/programs/flutter/bin/flutter'' finished with non-zero exit value 1
+    final currentBanner = list[_currentSlideIndex % list.length];
+    final int durationSec = (currentBanner['duration_seconds'] as int? ?? 5).clamp(2, 60);
 
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to generate a Build Scan (Powered by Develocity).
-> Get more help at https://help.gradle.org.
+    _customTimer = Timer(Duration(seconds: durationSec), () {
+      if (!mounted || list.isEmpty) return;
+      _carouselController.nextPage(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
 
-BUILD FAILED in 1m 57s
-[=========                              ] 25%                                   
-Running Gradle task 'assembleDebug'...                            118.7s
-Gradle task assembleDebug failed with exit code 1
+  @override
+  void dispose() {
+    _customTimer?.cancel();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final list = _activeBanners;
 
-Build failed :|
-Failed to build for Android
+    // في حال عدم وجود صور، يتم عرض كرت خفيف بكتابة: "منطقة إعلان فارغة"
+    if (list.isEmpty) {
+      return Container(
+        height: 160,
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.photo_library_outlined, size: 40, color: Colors.blueGrey.shade300),
+            const SizedBox(height: 8),
+            const Text(
+              'منطقة إعلان فارغة',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'يمكنك إضافة وتفعيل البانرات من لوحة التحكم',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          CarouselSlider.builder(
+            carouselController: _carouselController,
+            itemCount: list.length,
+            options: CarouselOptions(
+              height: 175,
+              viewportFraction: 0.92,
+              enlargeCenterPage: true,
+              autoPlay: false, // التحكم بالانتقال يتم حصراً عبر المؤقت الزمني المخصص
+              onPageChanged: (index, reason) {
+                setState(() => _currentSlideIndex = index);
+                _startCustomTimer();
+              },
+            ),
+            itemBuilder: (context, index, realIndex) {
+              final banner = list[index];
+              final imageUrl = banner['image_url']?.toString() ?? '';
+
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey.shade100,
+                    child: const Center(
+                      child: Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // مؤشر النقاط أسفل السلايدر
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: list.asMap().entries.map((entry) {
+              final isSelected = _currentSlideIndex % list.length == entry.key;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isSelected ? 20.0 : 7.0,
+                height: 7.0,
+                margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: isSelected ? const Color(0xFF006837) : Colors.grey.shade300,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
